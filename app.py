@@ -38,8 +38,6 @@ parser.add_argument("-p", "--port",
 
 arguments = parser.parse_args()
 
-print(arguments.host, arguments.port, arguments.num_clients)
-
 match arguments.create[0]:
 
     case ("c"|"create"):

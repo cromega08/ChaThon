@@ -2,6 +2,7 @@ from _thread import *
 import asyncio
 from select import select
 import socket
+import subprocess
 import sys
 import random
 
@@ -11,11 +12,13 @@ class stream:
             self.stream = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.host = host
             self.port = port if port != None else self.get_avaible()
+            self.i = False
             self.clients = []
         except: print("An error ocurred with socket creation")
 
     def create_server(self, num_clients: int) -> None:
         try:
+            print(self.host, self.port, sep="\n", end="\n")
             self.stream.bind((self.host, self.port))
             self.stream.listen(int(num_clients) + 1)
             self_created = False
@@ -24,8 +27,9 @@ class stream:
                 self.clients.append(connection)
                 start_new_thread(self.each_client, (connection, client[0]))
                 self.send_message(bytes(f"[{client[0]}] connected", "utf-8"), connection)
-                if not self_created: start_new_thread(self.self_client(self.port))
+                if not self_created: start_new_thread(self.self_client, ())
                 self_created = True
+                if self.clients == 0: break
         finally:
             connection.close()
             self.stream.close()
@@ -37,14 +41,17 @@ class stream:
         while True:
             try:
                 message = connection.recv(2022)
-                if message:
+                print("here")
+                if message != b"":
+                    print("received")
                     to_send = f"[{client}]: {message}"
-                    print(to_send); self.send_message(bytes(message, "utf-8"), connection)
+                    self.send_message(bytes(message, "utf-8"), connection)
+                else: self.clients.remove(connection); connection.close(); break
             except: continue
     
     def send_message(self, message:bytes, connection:socket.socket) -> None:
         for client in self.clients:
-            if client != connection:
+            if client != connection or self.i == True:
                 try: client.sendall(message)
                 except: client.close(); self.clients.remove(client)
 
@@ -55,27 +62,34 @@ class stream:
                 sockets_list = [sys.stdin, self.stream]
                 read_sockets, write_sockets, error_sockets = select(sockets_list, [], [])
                 for sockets in read_sockets:
-                    if sockets == self.stream: print(sockets.recv(2022))
+                    if sockets == self.stream:
+                        print("received client")
+                        message = sockets.recv(2022)
+                        if message == b"": break
+                        print(message)
                     else:
-                        message = input("[You]: ")
+                        message = input("[You]:")
                         self.stream.sendall(bytes(message, "utf-8"))
                         print("\n")
-        finally: self.stream.close()
+                if message == b"": break
+        finally: self.stream.close(); print(f"\nConnection with {self.host} was finished"); sys.exit()
 
     def self_client(self) -> None:
-        try:
-            self_client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self_client.connect((self.host, self.port))
-            while True:
-                sockets_list = [sys.stdin, self_client] 
-                read_sockets, write_sockets, error_sockets = select(sockets_list, [], [])
-                for sockets in read_sockets:
-                    if sockets == self_client: print(sockets.recv(2022))
-                    else:
-                        message = input("[You]: ")
-                        self_client.sendall(bytes(message, "utf-8"))
-                        print("\n")
-        finally: self_client.close()
+        self.i = True
+        subprocess.call(["xterm", "-e", f"python -u /home/cromega/programming/projects/cli_chat_application/app.py c -ip {self.host} -p {self.port}"])
+        # try:
+        #     self_client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        #     self_client.connect((self.host, self.port))
+        #     while True:
+        #         sockets_list = [sys.stdin, self_client] 
+        #         read_sockets, write_sockets, error_sockets = select(sockets_list, [], [])
+        #         for sockets in read_sockets:
+        #             if sockets == self_client: print(sockets.recv(2022))
+        #             else:
+        #                 message = input("[You]: ")
+        #                 self_client.sendall(bytes(message, "utf-8"))
+        #                 print("\n")
+        # finally: self_client.close()
         
     def get_avaible(self) -> int:
 
