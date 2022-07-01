@@ -37,7 +37,7 @@ class stream:
                 connection, client = self.stream.accept()
                 self.clients.append(connection)
                 start_new_thread(self.each_client, (connection, client[0]))
-                self.send_message(bytes(f"[{client[0]}] connected", "utf-8"), connection)
+                self.send_message(bytes(f"[{client[0]}] connected to the server", "utf-8"), connection)
                 
                 if not self_created: start_new_thread(self.self_client, ()); self_created = True
         
@@ -109,7 +109,7 @@ class stream:
     def self_client(self) -> None:
 
         self.i = True
-        subprocess.call(["xterm", "-e", f"python -u /home/cromega/programming/projects/cli_chat_application/app.py c -ip {self.host} -p {self.port}"])
+        subprocess.call(["xterm", "-e", f"chathon c -ip {self.host} -p {self.port}"])
         
     def get_avaible(self) -> int:
 
